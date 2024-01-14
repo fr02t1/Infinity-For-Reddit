@@ -428,6 +428,15 @@ public class ViewPostDetailActivity extends BaseActivity implements SortTypeSele
         }
     }
 
+    public void showRemovedComment(Comment comment, int position) {
+        if (sectionsPagerAdapter != null) {
+            ViewPostDetailFragment fragment = sectionsPagerAdapter.getCurrentFragment();
+            if (fragment != null) {
+                fragment.showRemovedComment(comment, position);
+            }
+        }
+    }
+
     public void saveComment(@NonNull Comment comment, int position) {
         if (comment.isSaved()) {
             comment.setSaved(false);
