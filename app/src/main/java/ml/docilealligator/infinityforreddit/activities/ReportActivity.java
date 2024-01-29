@@ -54,6 +54,9 @@ public class ReportActivity extends BaseActivity {
     @BindView(R.id.recycler_view_report_activity)
     RecyclerView recyclerView;
     @Inject
+    @Named("no_oauth")
+    Retrofit mRetrofit;
+    @Inject
     @Named("oauth")
     Retrofit mOauthRetrofit;
     @Inject
@@ -68,8 +71,6 @@ public class ReportActivity extends BaseActivity {
     CustomThemeWrapper mCustomThemeWrapper;
     @Inject
     Executor mExecutor;
-    private String mAccessToken;
-    private String mAccountName;
     private String mFullname;
     private String mSubredditName;
     private ArrayList<ReportReason> generalReasons;
@@ -103,9 +104,6 @@ public class ReportActivity extends BaseActivity {
         mFullname = getIntent().getStringExtra(EXTRA_THING_FULLNAME);
         mSubredditName = getIntent().getStringExtra(EXTRA_SUBREDDIT_NAME);
 
-        mAccessToken = mCurrentAccountSharedPreferences.getString(SharedPreferencesUtils.ACCESS_TOKEN, null);
-        mAccountName = mCurrentAccountSharedPreferences.getString(SharedPreferencesUtils.ACCOUNT_NAME, Account.ANONYMOUS_ACCOUNT);
-
         if (savedInstanceState != null) {
             generalReasons = savedInstanceState.getParcelableArrayList(GENERAL_REASONS_STATE);
             rulesReasons = savedInstanceState.getParcelableArrayList(RULES_REASON_STATE);
@@ -119,7 +117,9 @@ public class ReportActivity extends BaseActivity {
         recyclerView.setAdapter(mAdapter);
 
         if (rulesReasons == null) {
-            FetchRules.fetchRules(mExecutor, new Handler(), mOauthRetrofit, mAccessToken, mSubredditName, new FetchRules.FetchRulesListener() {
+            FetchRules.fetchRules(mExecutor, new Handler(),
+                    accountName.equals(Account.ANONYMOUS_ACCOUNT) ? mRetrofit : mOauthRetrofit,
+                    accessToken, accountName, mSubredditName, new FetchRules.FetchRulesListener() {
                 @Override
                 public void success(ArrayList<Rule> rules) {
                     mAdapter.setRules(ReportReason.convertRulesToReasons(rules));
@@ -152,7 +152,7 @@ public class ReportActivity extends BaseActivity {
             ReportReason reportReason = mAdapter.getSelectedReason();
             if (reportReason != null) {
                 Toast.makeText(ReportActivity.this, R.string.reporting, Toast.LENGTH_SHORT).show();
-                ReportThing.reportThing(mOauthRetrofit, mAccessToken, mFullname, mSubredditName,
+                ReportThing.reportThing(mOauthRetrofit, accessToken, mFullname, mSubredditName,
                         reportReason.getReasonType(), reportReason.getReportReason(), new ReportThing.ReportThingListener() {
                             @Override
                             public void success() {
@@ -186,6 +186,11 @@ public class ReportActivity extends BaseActivity {
     @Override
     public SharedPreferences getDefaultSharedPreferences() {
         return mSharedPreferences;
+    }
+
+    @Override
+    public SharedPreferences getCurrentAccountSharedPreferences() {
+        return mCurrentAccountSharedPreferences;
     }
 
     @Override

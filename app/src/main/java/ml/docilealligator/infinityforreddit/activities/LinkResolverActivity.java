@@ -10,6 +10,7 @@ import android.os.Bundle;
 import android.webkit.URLUtil;
 import android.widget.Toast;
 
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.browser.customtabs.CustomTabColorSchemeParams;
 import androidx.browser.customtabs.CustomTabsIntent;
@@ -17,6 +18,7 @@ import androidx.browser.customtabs.CustomTabsService;
 
 import org.apache.commons.io.FilenameUtils;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -27,6 +29,11 @@ import ml.docilealligator.infinityforreddit.Infinity;
 import ml.docilealligator.infinityforreddit.R;
 import ml.docilealligator.infinityforreddit.customtheme.CustomThemeWrapper;
 import ml.docilealligator.infinityforreddit.utils.SharedPreferencesUtils;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.Request;
+import okhttp3.Response;
+import retrofit2.Retrofit;
 
 public class LinkResolverActivity extends AppCompatActivity {
 
@@ -40,6 +47,8 @@ public class LinkResolverActivity extends AppCompatActivity {
     private static final String COMMENT_PATTERN = "/(r|u|U|user)/[\\w-]+/comments/\\w+/?[\\w-]+/\\w+/?";
     private static final String SUBREDDIT_PATTERN = "/[rR]/[\\w-]+/?";
     private static final String USER_PATTERN = "/(u|U|user)/[\\w-]+/?";
+    private static final String SHARELINK_SUBREDDIT_PATTERN = "/r/[\\w-]+/s/[\\w-]+";
+    private static final String SHARELINK_USER_PATTERN = "/u/[\\w-]+/s/[\\w-]+";
     private static final String SIDEBAR_PATTERN = "/[rR]/[\\w-]+/about/sidebar";
     private static final String MULTIREDDIT_PATTERN = "/user/[\\w-]+/m/\\w+/?";
     private static final String MULTIREDDIT_PATTERN_2 = "/[rR]/(\\w+\\+?)+/?";
@@ -51,10 +60,14 @@ public class LinkResolverActivity extends AppCompatActivity {
     private static final String WIKI_PATTERN = "/[rR]/[\\w-]+/(wiki|w)(?:/[\\w-]+)*";
     private static final String GOOGLE_AMP_PATTERN = "/amp/s/amp.reddit.com/.*";
     private static final String STREAMABLE_PATTERN = "/\\w+/?";
-
+    
+    @Inject
+    @Named("no_oauth")
+    Retrofit mRetrofit;
     @Inject
     @Named("default")
     SharedPreferences mSharedPreferences;
+    
     @Inject
     CustomThemeWrapper mCustomThemeWrapper;
 
@@ -250,6 +263,33 @@ public class LinkResolverActivity extends AppCompatActivity {
                                 Intent intent = new Intent(this, ViewPostDetailActivity.class);
                                 intent.putExtra(ViewPostDetailActivity.EXTRA_POST_ID, path.substring(1));
                                 startActivity(intent);
+                            } else if (uri.getPath().matches(SHARELINK_SUBREDDIT_PATTERN)
+                                    || uri.getPath().matches(SHARELINK_USER_PATTERN)) {
+                                mRetrofit.callFactory().newCall(new Request.Builder().url(uri.toString()).build()).enqueue(new Callback() {
+                                    @Override
+                                    public void onResponse(@NonNull Call call, @NonNull Response response) {
+                                        if (response.isSuccessful()) {
+                                            Uri newUri = Uri.parse(response.request().url().toString());
+                                            if (newUri.getPath() != null) {
+                                                if (newUri.getPath().matches(SHARELINK_SUBREDDIT_PATTERN)
+                                                        || newUri.getPath().matches(SHARELINK_USER_PATTERN)) {
+                                                    deepLinkError(newUri);
+                                                } else {
+                                                    handleUri(newUri);
+                                                }
+                                            } else {
+                                                handleUri(uri);
+                                            }
+                                        } else {
+                                            deepLinkError(uri);
+                                        }
+                                    }
+
+                                    @Override
+                                    public void onFailure(@NonNull Call call, @NonNull IOException e) {
+                                        deepLinkError(uri);
+                                    }
+                                });
                             } else {
                                 deepLinkError(uri);
                             }

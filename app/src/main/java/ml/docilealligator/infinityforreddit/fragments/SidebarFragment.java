@@ -38,6 +38,7 @@ import io.noties.markwon.core.MarkwonTheme;
 import ml.docilealligator.infinityforreddit.Infinity;
 import ml.docilealligator.infinityforreddit.R;
 import ml.docilealligator.infinityforreddit.RedditDataRoomDatabase;
+import ml.docilealligator.infinityforreddit.account.Account;
 import ml.docilealligator.infinityforreddit.activities.LinkResolverActivity;
 import ml.docilealligator.infinityforreddit.activities.ViewImageOrGifActivity;
 import ml.docilealligator.infinityforreddit.activities.ViewSubredditDetailActivity;
@@ -64,12 +65,14 @@ import retrofit2.Retrofit;
 public class SidebarFragment extends Fragment {
 
     public static final String EXTRA_SUBREDDIT_NAME = "ESN";
-    public static final String EXTRA_ACCESS_TOKEN = "EAT";
     public SubredditViewModel mSubredditViewModel;
     @BindView(R.id.swipe_refresh_layout_sidebar_fragment)
     SwipeRefreshLayout swipeRefreshLayout;
     @BindView(R.id.markdown_recycler_view_sidebar_fragment)
     RecyclerView recyclerView;
+    @Inject
+    @Named("no_oauth")
+    Retrofit mRetrofit;
     @Inject
     @Named("oauth")
     Retrofit mOauthRetrofit;
@@ -80,7 +83,6 @@ public class SidebarFragment extends Fragment {
     @Inject
     Executor mExecutor;
     private ViewSubredditDetailActivity activity;
-    private String mAccessToken;
     private String subredditName;
     private LinearLayoutManagerBugFixed linearLayoutManager;
     private int markdownColor;
@@ -104,7 +106,6 @@ public class SidebarFragment extends Fragment {
 
         EventBus.getDefault().register(this);
 
-        mAccessToken = getArguments().getString(EXTRA_ACCESS_TOKEN);
         subredditName = getArguments().getString(EXTRA_SUBREDDIT_NAME);
         if (subredditName == null) {
             Toast.makeText(activity, R.string.error_getting_subreddit_name, Toast.LENGTH_SHORT).show();
@@ -243,7 +244,7 @@ public class SidebarFragment extends Fragment {
 
     public void fetchSubredditData() {
         swipeRefreshLayout.setRefreshing(true);
-        FetchSubredditData.fetchSubredditData(mOauthRetrofit, subredditName, mAccessToken, new FetchSubredditData.FetchSubredditDataListener() {
+        FetchSubredditData.fetchSubredditData(activity.accountName.equals(Account.ANONYMOUS_ACCOUNT) ? null : mOauthRetrofit, mRetrofit, subredditName, activity.accessToken, new FetchSubredditData.FetchSubredditDataListener() {
             @Override
             public void onFetchSubredditDataSuccess(SubredditData subredditData, int nCurrentOnlineSubscribers) {
                 swipeRefreshLayout.setRefreshing(false);

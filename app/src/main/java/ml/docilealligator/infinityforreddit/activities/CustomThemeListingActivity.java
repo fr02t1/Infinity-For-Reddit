@@ -73,6 +73,9 @@ public class CustomThemeListingActivity extends BaseActivity implements
     @Named("default")
     SharedPreferences sharedPreferences;
     @Inject
+    @Named("current_account")
+    SharedPreferences mCurrentAccountSharedPreferences;
+    @Inject
     RedditDataRoomDatabase redditDataRoomDatabase;
     @Inject
     CustomThemeWrapper customThemeWrapper;
@@ -147,12 +150,18 @@ public class CustomThemeListingActivity extends BaseActivity implements
     }
 
     @Override
+    public SharedPreferences getCurrentAccountSharedPreferences() {
+        return mCurrentAccountSharedPreferences;
+    }
+
+    @Override
     public CustomThemeWrapper getCustomThemeWrapper() {
         return customThemeWrapper;
     }
 
     @Override
     protected void applyCustomTheme() {
+        coordinatorLayout.setBackgroundColor(customThemeWrapper.getBackgroundColor());
         applyAppBarLayoutAndCollapsingToolbarLayoutAndToolbarTheme(appBarLayout, collapsingToolbarLayout, toolbar);
         applyFABTheme(fab);
     }

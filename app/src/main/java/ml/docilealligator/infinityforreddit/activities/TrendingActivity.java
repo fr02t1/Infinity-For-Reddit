@@ -83,6 +83,9 @@ public class TrendingActivity extends BaseActivity {
     @BindView(R.id.fetch_trending_search_text_view_trending_activity)
     TextView errorTextView;
     @Inject
+    @Named("no_oauth")
+    Retrofit mRetrofit;
+    @Inject
     @Named("oauth")
     Retrofit mOauthRetrofit;
     @Inject
@@ -98,8 +101,6 @@ public class TrendingActivity extends BaseActivity {
     CustomThemeWrapper mCustomThemeWrapper;
     @Inject
     Executor mExecutor;
-    private String mAccessToken;
-    private String mAccountName;
     private boolean isRefreshing = false;
     private ArrayList<TrendingSearch> trendingSearches;
     private TrendingSearchRecyclerViewAdapter adapter;
@@ -147,9 +148,6 @@ public class TrendingActivity extends BaseActivity {
         setSupportActionBar(toolbar);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         setToolbarGoToTop(toolbar);
-
-        mAccessToken = mCurrentAccountSharedPreferences.getString(SharedPreferencesUtils.ACCESS_TOKEN, null);
-        mAccountName = mCurrentAccountSharedPreferences.getString(SharedPreferencesUtils.ACCOUNT_NAME, Account.ANONYMOUS_ACCOUNT);
 
         mGlide = Glide.with(this);
 
@@ -205,8 +203,12 @@ public class TrendingActivity extends BaseActivity {
         trendingSearches = null;
         adapter.setTrendingSearches(null);
         Handler handler = new Handler();
-        Call<String> trendingCall = mOauthRetrofit.create(RedditAPI.class)
-                .getTrendingSearchesOauth(APIUtils.getOAuthHeader(mAccessToken));
+        Call<String> trendingCall;
+        if (accountName.equals(Account.ANONYMOUS_ACCOUNT)) {
+            trendingCall = mRetrofit.create(RedditAPI.class).getTrendingSearches();
+        } else {
+            trendingCall = mOauthRetrofit.create(RedditAPI.class).getTrendingSearchesOauth(APIUtils.getOAuthHeader(accessToken));
+        }
         trendingCall.enqueue(new Callback<>() {
             @Override
             public void onResponse(@NonNull Call<String> call, @NonNull Response<String> response) {
@@ -312,6 +314,11 @@ public class TrendingActivity extends BaseActivity {
     @Override
     public SharedPreferences getDefaultSharedPreferences() {
         return mSharedPreferences;
+    }
+
+    @Override
+    public SharedPreferences getCurrentAccountSharedPreferences() {
+        return mCurrentAccountSharedPreferences;
     }
 
     @Override
